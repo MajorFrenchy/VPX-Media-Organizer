@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VPX Bulk Organizer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  --bg:    #07080d;
+  --surf:  #0d0f1c;
+  --surf2: #111320;
+  --b1:    #1c1f38;
+  --b2:    #252847;
+  --acc:   #f97316;
+  --acc-g: rgba(249,115,22,.25);
+  --cyan:  #22d3ee;
+  --cg:    rgba(34,211,238,.18);
+  --green: #4ade80;
+  --red:   #f87171;
+  --yel:   #fbbf24;
+  --pur:   #a78bfa;
+  --txt:   #cbd5e1;
+  --dim:   #475569;
+  --mut:   #2d3550;
+  --mono:  'Share Tech Mono', monospace;
+  --disp:  'Orbitron', sans-serif;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px;line-height:1.5;overflow-x:hidden}
+body{min-height:100vh;background-image:
+  radial-gradient(ellipse 70% 55% at 50% -5%,rgba(249,115,22,.09) 0%,transparent 65%),
+  radial-gradient(ellipse 45% 35% at 95% 85%,rgba(34,211,238,.05) 0%,transparent 55%);}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.055) 2px,rgba(0,0,0,.055) 4px);}
+
+.app{display:flex;flex-direction:column;max-width:1140px;width:100%;margin:0 auto;padding:26px 18px 70px;gap:16px}
+
+/* ── header ── */
+.hdr{display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:1px solid var(--b1);position:relative}
+.hdr::after{content:'';position:absolute;bottom:-1px;left:0;width:220px;height:1px;background:linear-gradient(90deg,var(--acc),transparent)}
+.logo{width:42px;height:42px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 22px var(--acc-g);transition:background .3s,box-shadow .3s}
+.hdr-title{font-family:var(--disp);font-size:17px;font-weight:900;letter-spacing:.15em;color:#fff;line-height:1}
+.hdr-title em{color:var(--acc);font-style:normal;transition:color .3s}
+.hdr-sub{font-size:10px;color:var(--dim);letter-spacing:.22em;text-transform:uppercase;margin-top:4px}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pill{font-family:var(--disp);font-size:9px;font-weight:700;letter-spacing:.15em;padding:3px 9px;border-radius:3px;text-transform:uppercase}
+.p-idle{background:rgba(71,85,105,.3);color:var(--dim)}
+.p-scan{background:rgba(249,115,22,.15);color:var(--acc)}
+.p-ready{background:rgba(251,191,36,.15);color:var(--yel)}
+.p-run{background:rgba(74,222,128,.15);color:var(--green)}
+.p-done{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.25)}
+
+/* ── MODE TOGGLE ── */
+.mode-bar{display:flex;align-items:stretch;background:var(--surf);border:1px solid var(--b1);border-radius:8px;overflow:hidden;position:relative}
+.mode-bar::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acc);box-shadow:0 0 14px var(--acc-g);transition:background .3s}
+.mode-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px 20px;cursor:pointer;border:none;background:transparent;color:var(--dim);transition:all .2s;position:relative;border-right:1px solid var(--b1)}
+.mode-btn:last-child{border-right:none}
+.mode-btn.active{background:rgba(249,115,22,.06);color:var(--txt)}
+.mode-btn:hover:not(.active){background:rgba(255,255,255,.02);color:var(--txt)}
+.mode-arrow{display:flex;align-items:center;gap:8px;font-size:11px;font-family:var(--mono)}
+.mode-from{font-family:var(--disp);font-size:10px;font-weight:700;letter-spacing:.12em}
+.mode-to{font-family:var(--disp);font-size:10px;font-weight:700;letter-spacing:.12em}
+.mode-desc{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-top:2px}
+.mode-btn.active .mode-from{color:var(--acc)}
+.mode-btn.active .mode-to{color:var(--cyan)}
+.mode-btn.active .mode-desc{color:var(--dim)}
+.mode-dot{width:6px;height:6px;border-radius:50%;background:var(--b2);flex-shrink:0;transition:background .2s}
+.mode-btn.active .mode-dot{background:var(--acc);box-shadow:0 0 6px var(--acc)}
+.mode-chevron{font-size:14px;color:var(--b2);transition:color .2s}
+.mode-btn.active .mode-chevron{color:var(--acc)}
+
+/* mode-specific accent: batocera→vpinfe uses purple */
+body.mode-b2v { --acc: #a78bfa; --acc-g: rgba(167,139,250,.25); }
+body.mode-b2v .hdr::after { background: linear-gradient(90deg,var(--acc),transparent); }
+body.mode-b2v .mode-bar::before { background: var(--acc); box-shadow: 0 0 14px var(--acc-g); }
+
+/* ── compat ── */
+.compat{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.22);border-radius:6px;padding:11px 15px;font-size:11px;color:var(--red);display:none;letter-spacing:.05em;line-height:1.7}
+.compat.show{display:block}
+
+/* ── pick strip ── */
+.pick{background:var(--surf);border:1px solid var(--b1);border-radius:8px;padding:16px 20px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden}
+.pick::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acc);box-shadow:0 0 14px var(--acc-g);transition:background .3s,box-shadow .3s}
+.pick-ic{width:36px;height:36px;background:var(--surf2);border:1px solid var(--b2);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc)}
+.pick-info{flex:1}
+.pick-lbl{font-family:var(--disp);font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--txt);text-transform:uppercase}
+.pick-path{font-size:11px;color:var(--dim);margin-top:3px;word-break:break-all}
+#pathTxt{color:var(--cyan)}
+
+/* ── buttons ── */
+.btn{font-family:var(--disp);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;padding:9px 16px;border-radius:4px;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.btn:disabled{opacity:.32;cursor:not-allowed}
+.b-acc{background:var(--acc);color:#000;box-shadow:0 0 16px var(--acc-g);transition:background .3s,box-shadow .3s}
+.b-acc:not(:disabled):hover{filter:brightness(1.15);transform:translateY(-1px)}
+.b-go{background:var(--green);color:#000;box-shadow:0 0 14px rgba(74,222,128,.2)}
+.b-go:not(:disabled):hover{background:#86efac;box-shadow:0 0 26px rgba(74,222,128,.4);transform:translateY(-1px)}
+.b-ghost{background:transparent;color:var(--dim);border:1px solid var(--b2)}
+.b-ghost:not(:disabled):hover{color:var(--cyan);border-color:var(--cyan)}
+.b-cyan{background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.25)}
+.b-cyan:not(:disabled):hover{background:rgba(34,211,238,.18)}
+
+/* ── stats ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sc{background:var(--surf);border:1px solid var(--b1);border-radius:6px;padding:13px 15px;position:relative;overflow:hidden}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.sc-t::after{background:var(--acc)}
+.sc-f::after{background:var(--cyan)}
+.sc-r::after{background:var(--yel)}
+.sc-u::after{background:var(--red)}
+.sc-n{font-family:var(--disp);font-size:26px;font-weight:900;line-height:1;margin-bottom:3px}
+.sc-t .sc-n{color:var(--acc)}
+.sc-f .sc-n{color:var(--cyan)}
+.sc-r .sc-n{color:var(--yel)}
+.sc-u .sc-n{color:var(--red)}
+.sc-l{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+
+/* ── main grid ── */
+.grid{display:grid;grid-template-columns:1fr 330px;gap:14px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+
+/* ── panel ── */
+.panel{background:var(--surf);border:1px solid var(--b1);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+.ph{display:flex;align-items:center;gap:10px;padding:11px 15px;border-bottom:1px solid var(--b1);background:rgba(255,255,255,.015);flex-shrink:0}
+.ph-title{font-family:var(--disp);font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;flex:1}
+
+/* table list */
+.tlist{overflow-y:auto;flex:1;max-height:500px}
+.ti{padding:9px 15px;border-bottom:1px solid rgba(255,255,255,.028);cursor:pointer;transition:background .1s;display:flex;align-items:center;gap:10px;border-left:2px solid transparent}
+.ti:hover{background:rgba(255,255,255,.022)}
+.ti.sel{background:rgba(249,115,22,.06);border-left-color:var(--acc)}
+.ti.done .ti-name{color:var(--dim);text-decoration:line-through}
+.tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dr{background:var(--yel);box-shadow:0 0 5px var(--yel)}
+.dok{background:var(--green);box-shadow:0 0 5px var(--green)}
+.du{background:var(--red);box-shadow:0 0 5px var(--red)}
+.dd{background:var(--green);opacity:.4}
+.ti-name{flex:1;font-size:12px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ti-meta{font-size:10px;color:var(--dim);flex-shrink:0;text-align:right;line-height:1.4}
+
+.abar{display:flex;align-items:center;gap:9px;padding:11px 15px;border-top:1px solid var(--b1);background:rgba(255,255,255,.01);flex-wrap:wrap}
+.sp{flex:1}
+
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 20px;gap:9px;color:var(--mut)}
+.ei{font-size:28px;opacity:.3}
+.et{font-size:11px;letter-spacing:.1em;text-align:center;line-height:1.9}
+
+/* detail */
+.dh{padding:10px 15px;border-bottom:1px solid var(--b1);flex-shrink:0}
+.dn{font-family:var(--disp);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--acc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .3s}
+.ds{font-size:10px;color:var(--dim);margin-top:2px}
+.flist{overflow-y:auto;max-height:360px}
+.fe{display:grid;grid-template-columns:12px 1fr 16px 1fr 56px;align-items:center;gap:5px;padding:6px 13px;border-bottom:1px solid rgba(255,255,255,.022);font-size:11px}
+.fedot{width:6px;height:6px;border-radius:50%}
+.fe-r{background:var(--yel)}
+.fe-ok{background:var(--green)}
+.fe-u{background:var(--red)}
+.fe-d{background:var(--green);opacity:.45}
+.fe-src{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fe-arr{color:var(--b2);text-align:center}
+.fe-arr.on{color:var(--acc)}
+.fe-dst{color:var(--cyan);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fe-dst.grey{color:var(--mut);font-style:italic}
+.badge{font-size:8px;letter-spacing:.06em;padding:2px 5px;border-radius:2px;text-align:center;text-transform:uppercase;white-space:nowrap}
+.ba-r{background:rgba(251,191,36,.12);color:var(--yel);border:1px solid rgba(251,191,36,.22)}
+.ba-ok{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.2)}
+.ba-u{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.ba-d{background:rgba(74,222,128,.07);color:var(--green);border:1px solid rgba(74,222,128,.15);opacity:.6}
+
+/* log */
+.logpanel{background:var(--surf);border:1px solid var(--b1);border-radius:8px;overflow:hidden}
+.progwrap{flex:1;height:3px;background:var(--b1);border-radius:2px;overflow:hidden;margin-left:12px;align-self:center}
+.progbar{height:100%;background:linear-gradient(90deg,var(--acc),var(--cyan));border-radius:2px;transition:width .25s ease;width:0%;box-shadow:0 0 8px var(--acc-g)}
+#logOut{background:#030406;padding:13px 15px;font-size:11px;line-height:1.85;max-height:200px;overflow-y:auto;white-space:pre;color:var(--dim)}
+.lh{color:var(--mut)} .lt{color:var(--acc)} .lr{color:var(--yel)}
+.lo{color:var(--green)} .lw{color:var(--red)} .lm{color:var(--cyan)} .ld{color:var(--green);font-weight:bold}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fadeUp .25s ease both}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="hdr fu">
+    <div class="logo" id="logo">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <rect x="2"  y="8"  width="18" height="2.5" rx="1" fill="#000" opacity=".9"/>
+        <rect x="2"  y="12" width="12" height="2.5" rx="1" fill="#000" opacity=".9"/>
+        <circle cx="17" cy="13.25" r="2.5" fill="#000"/>
+        <path d="M5 5L11 3l6 2" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="hdr-title">VPX <em>ORGANIZER</em></div>
+      <div class="hdr-sub" id="hdrSub">Visual Pinball X — Bulk Media Converter</div>
+    </div>
+    <div class="hdr-right">
+      <span class="pill p-idle" id="pill">Idle</span>
+    </div>
+  </div>
+
+  <!-- Compat warning -->
+  <div class="compat" id="compat">
+    ⚠ <strong>Chrome or Edge 86+ required.</strong> This tool uses the File System Access API to rename and move files directly on your disk. Firefox and Safari do not support this API.
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="mode-bar fu" style="animation-delay:.04s" id="modeBar">
+
+    <button class="mode-btn active" id="modeV2B" onclick="setMode('v2b')">
+      <div class="mode-arrow">
+        <span class="mode-dot"></span>
+        <span class="mode-from">VPinFE</span>
+        <span class="mode-chevron">→</span>
+        <span class="mode-to">Batocera</span>
+      </div>
+      <div class="mode-desc">Rename &amp; move files into table root</div>
+      <div style="font-size:9px;color:var(--mut);margin-top:4px;letter-spacing:.05em">
+        medias/bg.mp4 → backglass.mp4 &nbsp;·&nbsp; medias/fulldmd.mp4 → dmd.mp4 &nbsp;·&nbsp; medias/wheel.apng → wheel.png
+      </div>
+    </button>
+
+    <button class="mode-btn" id="modeB2V" onclick="setMode('b2v')">
+      <div class="mode-arrow">
+        <span class="mode-dot"></span>
+        <span class="mode-from">Batocera</span>
+        <span class="mode-chevron">→</span>
+        <span class="mode-to">VPinFE</span>
+      </div>
+      <div class="mode-desc">Reverse: move files back into medias/ with original names</div>
+      <div style="font-size:9px;color:var(--mut);margin-top:4px;letter-spacing:.05em">
+        backglass.mp4 → medias/bg.mp4 &nbsp;·&nbsp; dmd.mp4 → medias/fulldmd.mp4 &nbsp;·&nbsp; wheel.png → medias/wheel.apng
+      </div>
+    </button>
+
+  </div>
+
+  <!-- Folder picker -->
+  <div class="pick fu" style="animation-delay:.08s">
+    <div class="pick-ic">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M2 5a2 2 0 012-2h3l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div class="pick-info">
+      <div class="pick-lbl">Root Tables Folder</div>
+      <div class="pick-path"><span id="pathTxt">No folder selected</span><span id="tCount" style="color:var(--mut)"></span></div>
+    </div>
+    <button class="btn b-acc" id="btnPick">📁 Select Folder</button>
+    <button class="btn b-ghost" id="btnScan" disabled>🔍 Scan</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats fu" style="animation-delay:.12s">
+    <div class="sc sc-t"><div class="sc-n" id="sTables">0</div><div class="sc-l">Tables Found</div></div>
+    <div class="sc sc-f"><div class="sc-n" id="sFiles">0</div><div class="sc-l">Media Files</div></div>
+    <div class="sc sc-r"><div class="sc-n" id="sRenames">0</div><div class="sc-l" id="sRenamesLbl">Rename + Move</div></div>
+    <div class="sc sc-u"><div class="sc-n" id="sUnmapped">0</div><div class="sc-l">Unmapped</div></div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="grid fu" style="animation-delay:.16s">
+
+    <!-- Left: table list -->
+    <div class="panel">
+      <div class="ph">
+        <div class="ph-title" id="panelTitle">Tables</div>
+        <span id="scanSpinner" style="font-size:10px;color:var(--acc);display:none">● scanning…</span>
+      </div>
+      <div class="tlist" id="tlist">
+        <div class="empty">
+          <div class="ei">🗂</div>
+          <div class="et">Select your root tables folder<br>then click <strong style="color:var(--acc)">Scan</strong></div>
+        </div>
+      </div>
+      <div class="abar">
+        <button class="btn b-go"    id="btnRun"  disabled>⚡ Run All</button>
+        <button class="btn b-cyan"  id="btnLog"  disabled>↓ Save Log</button>
+        <div class="sp"></div>
+        <button class="btn b-ghost" id="btnReset" disabled>↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- Right: detail + log -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <div class="panel" style="flex:1">
+        <div class="ph"><div class="ph-title">Rename Plan</div></div>
+        <div id="dh" class="dh" style="display:none">
+          <div class="dn" id="dName">—</div>
+          <div class="ds" id="dSub"></div>
+        </div>
+        <div class="flist" id="flist">
+          <div class="empty" style="padding:28px 16px">
+            <div class="ei" style="font-size:22px">👆</div>
+            <div class="et" style="font-size:10px">Click any table to preview its rename plan</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="logpanel">
+        <div class="ph">
+          <div class="ph-title">Operation Log</div>
+          <div class="progwrap"><div class="progbar" id="prog"></div></div>
+        </div>
+        <div id="logOut"><span class="lh">Waiting for scan…</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /app -->
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// RULE DEFINITIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// VPinFE → Batocera
+// Source files are inside medias/ subfolder, destination is the table root.
+// src = filename inside medias/, dst = filename at table root
+const RULES_V2B = [
+  { src:'table.mp4',        dst:'table.mp4',        a:'ok'     },
+  { src:'bg.mp4',           dst:'backglass.mp4',    a:'rename' },
+  { src:'backglass.mp4',    dst:'backglass.mp4',    a:'ok'     },
+  { src:'bg.png',           dst:'backglass.png',    a:'rename' },
+  { src:'bg.jpg',           dst:'backglass.jpg',    a:'rename' },
+  { src:'rules.png',        dst:'backglass.png',    a:'rename' },
+  { src:'rules.jpg',        dst:'backglass.jpg',    a:'rename' },
+  { src:'flyer.png',        dst:'backglass.png',    a:'rename' },
+  { src:'flyer.jpg',        dst:'backglass.jpg',    a:'rename' },
+  { src:'backglass.png',    dst:'backglass.png',    a:'ok'     },
+  { src:'backglass.jpg',    dst:'backglass.jpg',    a:'ok'     },
+  { src:'fulldmd.mp4',      dst:'dmd.mp4',          a:'rename' },
+  { src:'dmd.mp4',          dst:'dmd.mp4',          a:'ok'     },
+  { src:'fulldmd.png',      dst:'dmd.png',          a:'rename' },
+  { src:'fulldmd.jpg',      dst:'dmd.jpg',          a:'rename' },
+  { src:'dmd.png',          dst:'dmd.png',          a:'ok'     },
+  { src:'dmd.jpg',          dst:'dmd.jpg',          a:'ok'     },
+  { src:'wheel.apng',       dst:'wheel.png',        a:'rename' },
+  { src:'wheel.png',        dst:'wheel.png',        a:'ok'     },
+  { src:'loading.mp3',      dst:'audiolaunch.mp3',  a:'rename' },
+  { src:'loading.mp4',      dst:'audiolaunch.mp4',  a:'rename' },
+  { src:'audiolaunch.mp3',  dst:'audiolaunch.mp3',  a:'ok'     },
+  { src:'audio.mp3',        dst:'audio.mp3',        a:'ok'     },
+  { src:'media_log.ini',    dst:null,               a:'skip'   },
+];
+
+// Batocera → VPinFE
+// Exact reverse: source is file at table root, dst is original VPinFE name inside medias/
+// We create the medias/ subfolder if it doesn't exist.
+const RULES_B2V = [
+  { src:'table.mp4',        dst:'table.mp4',        a:'ok'     },
+  { src:'backglass.mp4',    dst:'bg.mp4',           a:'rename' },
+  { src:'backglass.png',    dst:'rules.png',        a:'rename' },
+  { src:'backglass.jpg',    dst:'rules.jpg',        a:'rename' },
+  { src:'dmd.mp4',          dst:'fulldmd.mp4',      a:'rename' },
+  { src:'dmd.png',          dst:'fulldmd.png',      a:'rename' },
+  { src:'dmd.jpg',          dst:'fulldmd.jpg',      a:'rename' },
+  { src:'wheel.png',        dst:'wheel.apng',       a:'rename' },
+  { src:'audiolaunch.mp3',  dst:'loading.mp3',      a:'rename' },
+  { src:'audiolaunch.mp4',  dst:'loading.mp4',      a:'rename' },
+  { src:'audio.mp3',        dst:'audio.mp3',        a:'ok'     },
+];
+
+const SKIP_NAMES = new Set(['.ds_store','thumbs.db','desktop.ini']);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let mode       = 'v2b';   // 'v2b' | 'b2v'
+let rootHandle = null;
+let tables     = [];
+let selIdx     = -1;
+let logLines   = [];
+let busy       = false;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOM
+// ─────────────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const btnPick=$('btnPick'), btnScan=$('btnScan'), btnRun=$('btnRun');
+const btnLog=$('btnLog'),   btnReset=$('btnReset');
+const pathTxt=$('pathTxt'), tCount=$('tCount');
+const tlist=$('tlist'),     flist=$('flist');
+const dh=$('dh'), dName=$('dName'), dSub=$('dSub');
+const logOut=$('logOut'), prog=$('prog'), pill=$('pill');
+const compat=$('compat'), spinner=$('scanSpinner');
+const sTables=$('sTables'),sFiles=$('sFiles'),sRenames=$('sRenames'),sUnmapped=$('sUnmapped');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPAT
+// ─────────────────────────────────────────────────────────────────────────────
+if (!('showDirectoryPicker' in window)) {
+  compat.classList.add('show');
+  btnPick.disabled = true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODE SWITCH
+// ─────────────────────────────────────────────────────────────────────────────
+function setMode(m) {
+  if (busy) return;
+  mode = m;
+  $('modeV2B').classList.toggle('active', m === 'v2b');
+  $('modeB2V').classList.toggle('active', m === 'b2v');
+  document.body.className = m === 'b2v' ? 'mode-b2v' : '';
+
+  // Update subtitles
+  $('hdrSub').textContent = m === 'v2b'
+    ? 'VPinFE → Batocera  ·  Rename & Move to Table Root'
+    : 'Batocera → VPinFE  ·  Reverse: Move Back into medias/';
+  $('sRenamesLbl').textContent = m === 'v2b' ? 'Rename + Move' : 'Rename + Move';
+
+  // If already scanned, re-run scan automatically
+  if (tables.length > 0 || rootHandle) {
+    resetState();
+    if (rootHandle) btnScan.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SELECT FOLDER
+// ─────────────────────────────────────────────────────────────────────────────
+btnPick.addEventListener('click', async () => {
+  try {
+    rootHandle = await window.showDirectoryPicker({ mode:'readwrite' });
+    pathTxt.textContent = rootHandle.name;
+    tCount.textContent  = '';
+    btnScan.disabled    = false;
+    resetState();
+    setPill('p-idle','Folder Ready');
+    addLog('h', `Root: ${rootHandle.name}`);
+  } catch(e){ if(e.name!=='AbortError') console.error(e); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCAN
+// ─────────────────────────────────────────────────────────────────────────────
+btnScan.addEventListener('click', async () => {
+  if (!rootHandle || busy) return;
+  busy = true;
+  tables=[]; selIdx=-1; logLines=[];
+  logOut.innerHTML='';
+  resetStats();
+  setPill('p-scan','Scanning…');
+  btnScan.disabled = btnRun.disabled = true;
+  spinner.style.display = 'inline';
+
+  const rules = mode === 'v2b' ? RULES_V2B : RULES_B2V;
+  const modeLabel = mode === 'v2b' ? 'VPinFE → Batocera' : 'Batocera → VPinFE';
+
+  addLog('h','══════════════════════════════');
+  addLog('h',`Mode: ${modeLabel}`);
+  addLog('h',`Scanning: ${rootHandle.name}`);
+  addLog('h','══════════════════════════════');
+
+  let totFiles=0, totOps=0, totUn=0;
+
+  for await (const [name, handle] of rootHandle.entries()) {
+    if (handle.kind !== 'directory') continue;
+
+    let srcFiles = [];
+
+    if (mode === 'v2b') {
+      // V2B: read files from medias/ subfolder
+      let mediasHandle = null;
+      try { mediasHandle = await handle.getDirectoryHandle('medias', {create:false}); }
+      catch { continue; }
+      for await (const [fn, fh] of mediasHandle.entries()) {
+        if (fh.kind === 'file') srcFiles.push({name:fn, handle:fh});
+      }
+      const plan = buildPlan(srcFiles, rules);
+      const nOps = plan.filter(p=>p.a==='rename'||p.a==='ok').length;
+      const nUn  = plan.filter(p=>p.a==='unmapped').length;
+      tables.push({name, tableHandle:handle, mediasHandle, plan, done:false});
+      totFiles += srcFiles.length; totOps += nOps; totUn += nUn;
+      logPlan(name, plan);
+
+    } else {
+      // B2V: read files directly from the table root folder
+      for await (const [fn, fh] of handle.entries()) {
+        if (fh.kind === 'file' && !SKIP_NAMES.has(fn.toLowerCase()) && !fn.endsWith('.vpx')) {
+          srcFiles.push({name:fn, handle:fh});
+        }
+      }
+      if (!srcFiles.length) continue;
+      const plan = buildPlan(srcFiles, rules);
+      const nOps = plan.filter(p=>p.a==='rename'||p.a==='ok').length;
+      const nUn  = plan.filter(p=>p.a==='unmapped').length;
+      if (!nOps && !nUn) continue; // skip tables with nothing to do
+      tables.push({name, tableHandle:handle, mediasHandle:null, plan, done:false});
+      totFiles += srcFiles.length; totOps += nOps; totUn += nUn;
+      logPlan(name, plan);
+    }
+  }
+
+  sTables.textContent   = tables.length;
+  sFiles.textContent    = totFiles;
+  sRenames.textContent  = totOps;
+  sUnmapped.textContent = totUn;
+  tCount.textContent    = `  —  ${tables.length} table${tables.length!==1?'s':''} found`;
+
+  spinner.style.display = 'none';
+
+  if (!tables.length) {
+    addLog('w', mode==='v2b'
+      ? 'No table folders with a medias/ subfolder found.'
+      : 'No table folders with recognisable Batocera media files found.');
+    setPill('p-idle','Nothing Found');
+  } else {
+    addLog('h','══════════════════════════════');
+    addLog('o',`Scan complete — ${tables.length} tables, ${totOps} ops pending.`);
+    setPill(totOps>0?'p-ready':'p-done', totOps>0?'Ready':'Nothing to do');
+    btnRun.disabled   = totOps===0;
+    btnLog.disabled   = false;
+    btnReset.disabled = false;
+  }
+
+  btnScan.disabled = false;
+  busy = false;
+  renderTlist();
+  if (tables.length) selectTable(0);
+});
+
+function logPlan(name, plan) {
+  addLog('t', `TABLE: ${name}`);
+  for (const p of plan) {
+    if      (p.a==='rename')   addLog('r', `  ↳ RENAME   ${p.src.padEnd(24)}→ ${p.dst}`);
+    else if (p.a==='ok')       addLog('o', `  ↳ OK       ${p.src}`);
+    else if (p.a==='unmapped') addLog('w', `  ↳ UNMAPPED ${p.src}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUILD PLAN
+// ─────────────────────────────────────────────────────────────────────────────
+function buildPlan(srcFiles, rules) {
+  const plan    = [];
+  const usedDst = new Set();
+  const mapped  = new Set();
+
+  for (const rule of rules) {
+    const f = srcFiles.find(f => f.name.toLowerCase() === rule.src.toLowerCase());
+    if (!f) continue;
+    if (rule.a === 'skip')     { mapped.add(f.name); continue; }
+    if (usedDst.has(rule.dst)) { mapped.add(f.name); continue; }
+    plan.push({src:f.name, dst:rule.dst, a:rule.a, handle:f.handle});
+    usedDst.add(rule.dst);
+    mapped.add(f.name);
+  }
+
+  for (const f of srcFiles) {
+    if (!mapped.has(f.name) && !SKIP_NAMES.has(f.name.toLowerCase())) {
+      plan.push({src:f.name, dst:null, a:'unmapped', handle:f.handle});
+    }
+  }
+  return plan;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RUN
+// ─────────────────────────────────────────────────────────────────────────────
+btnRun.addEventListener('click', async () => {
+  if (busy) return;
+  busy = true;
+  btnRun.disabled = btnReset.disabled = true;
+  setPill('p-run','Running…');
+  prog.style.width = '0%';
+
+  const pending = tables.filter(t => !t.done);
+  const total   = pending.reduce((s,t)=>s+t.plan.filter(p=>p.a==='rename'||p.a==='ok').length, 0);
+  let done = 0;
+
+  const modeLabel = mode === 'v2b' ? 'VPinFE → Batocera' : 'Batocera → VPinFE';
+  addLog('h','══════════════════════════════');
+  addLog('h',`Executing: ${modeLabel}`);
+  addLog('h',`${total} op${total!==1?'s':''} across ${pending.length} table${pending.length!==1?'s':''}`);
+
+  for (const table of pending) {
+    const ops = table.plan.filter(p => p.a==='rename' || p.a==='ok');
+    if (!ops.length) { table.done = true; continue; }
+
+    addLog('t', `▸ ${table.name}`);
+
+    // For B2V: ensure medias/ subfolder exists in table root
+    let targetDir;
+    if (mode === 'v2b') {
+      // source = medias/, destination = table root
+      targetDir = table.tableHandle;
+    } else {
+      // source = table root, destination = medias/ (create if needed)
+      targetDir = await table.tableHandle.getDirectoryHandle('medias', {create:true});
+    }
+
+    for (const op of ops) {
+      try {
+        const srcDir = mode === 'v2b' ? table.mediasHandle : table.tableHandle;
+        await fsMoveRename(srcDir, op.src, targetDir, op.dst);
+        op.a = 'done';
+        done++;
+        prog.style.width = `${Math.round(done/total*100)}%`;
+        const label = op.src === op.dst
+          ? `  ✓  MOVE    ${op.src}`
+          : `  ✓  RENAME  ${op.src.padEnd(24)}→ ${op.dst}`;
+        addLog('m', label);
+      } catch(e) {
+        addLog('w', `  ✗  ${op.src} — ${e.message}`);
+      }
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    table.done = true;
+    if (tables[selIdx] === table) renderDetail(selIdx);
+    renderTlist();
+  }
+
+  prog.style.width = '100%';
+  addLog('h','══════════════════════════════');
+  addLog('d',`✓ Done — ${done} file${done!==1?'s':''} processed.`);
+  setPill('p-done',`Done · ${done} files`);
+  btnLog.disabled   = false;
+  btnReset.disabled = false;
+  busy = false;
+});
+
+// Read srcDir/srcName → write to dstDir/dstName → delete from srcDir
+async function fsMoveRename(srcDir, srcName, dstDir, dstName) {
+  const srcH = await srcDir.getFileHandle(srcName);
+  const file  = await srcH.getFile();
+  const buf   = await file.arrayBuffer();
+  const dstH  = await dstDir.getFileHandle(dstName, {create:true});
+  const w     = await dstH.createWritable();
+  await w.write(buf);
+  await w.close();
+  await srcDir.removeEntry(srcName);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER TABLE LIST
+// ─────────────────────────────────────────────────────────────────────────────
+function renderTlist() {
+  if (!tables.length) {
+    tlist.innerHTML=`<div class="empty"><div class="ei">🗂</div><div class="et">Select your root tables folder<br>then click <strong style="color:var(--acc)">Scan</strong></div></div>`;
+    return;
+  }
+  tlist.innerHTML='';
+  tables.forEach((t,i) => {
+    const pend = t.plan.filter(p=>p.a==='rename').length;
+    const un   = t.plan.filter(p=>p.a==='unmapped').length;
+    let dotCls = pend>0 ? 'dr' : 'dok';
+    if (t.done) dotCls='dd';
+    else if (un) dotCls='du';
+
+    const el = document.createElement('div');
+    el.className=`ti${i===selIdx?' sel':''}${t.done?' done':''}`;
+    el.innerHTML=`
+      <span class="tdot ${dotCls}"></span>
+      <span class="ti-name">${t.name}</span>
+      <span class="ti-meta">${pend?`<span style="color:var(--yel)">${pend}↺</span>`:'<span style="color:var(--green)">✓</span>'}${un?` <span style="color:var(--red)">${un}?</span>`:''}</span>
+    `;
+    el.addEventListener('click',()=>selectTable(i));
+    tlist.appendChild(el);
+  });
+}
+
+function selectTable(i) { selIdx=i; renderTlist(); renderDetail(i); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER DETAIL
+// ─────────────────────────────────────────────────────────────────────────────
+function renderDetail(i) {
+  const t = tables[i];
+  dh.style.display='block';
+  dName.textContent=t.name;
+  const pen  = t.plan.filter(p=>p.a==='rename').length;
+  const dn   = t.plan.filter(p=>p.a==='done').length;
+  const un   = t.plan.filter(p=>p.a==='unmapped').length;
+  dSub.textContent = t.done
+    ? `${dn} file${dn!==1?'s':''} processed`
+    : `${pen} op${pen!==1?'s':''} pending${un?`, ${un} unmapped`:''}`;
+
+  flist.innerHTML='';
+  for (const p of t.plan) {
+    if (p.a==='skip') continue;
+    const row=document.createElement('div');
+    row.className='fe';
+    let dc,ac,dstH,bdg;
+    switch(p.a){
+      case 'rename': dc='fe-r'; ac='on'; dstH=`<span class="fe-dst">${p.dst}</span>`; bdg=`<span class="badge ba-r">rename</span>`; break;
+      case 'ok':     dc='fe-ok';ac='';  dstH=`<span class="fe-dst" style="color:var(--dim)">${p.dst}</span>`; bdg=`<span class="badge ba-ok">ok</span>`; break;
+      case 'done':   dc='fe-d'; ac='on'; dstH=`<span class="fe-dst">${p.dst}</span>`; bdg=`<span class="badge ba-d">done</span>`; break;
+      default:       dc='fe-u'; ac='';  dstH=`<span class="fe-dst grey">unmapped</span>`; bdg=`<span class="badge ba-u">?</span>`; break;
+    }
+    row.innerHTML=`<span class="fedot ${dc}"></span><span class="fe-src">${p.src}</span><span class="fe-arr ${ac}">→</span>${dstH}${bdg}`;
+    flist.appendChild(row);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOG
+// ─────────────────────────────────────────────────────────────────────────────
+function addLog(type, msg) {
+  logLines.push(`[${ts()}] ${msg}`);
+  const map={h:'lh',t:'lt',r:'lr',o:'lo',w:'lw',m:'lm',d:'ld'};
+  const span=document.createElement('span');
+  span.className=map[type]||'lh';
+  span.textContent=`[${ts()}] ${msg}\n`;
+  logOut.appendChild(span);
+  logOut.scrollTop=logOut.scrollHeight;
+}
+
+btnLog.addEventListener('click', () => {
+  const blob=new Blob([logLines.join('\n')],{type:'text/plain'});
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(blob),
+    download:`vpx_${mode}_${new Date().toISOString().slice(0,19).replace(/[:.]/g,'-')}.log`
+  });
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESET
+// ─────────────────────────────────────────────────────────────────────────────
+btnReset.addEventListener('click', () => { resetState(); btnScan.disabled=!rootHandle; });
+
+function resetState() {
+  tables=[]; selIdx=-1; logLines=[];
+  logOut.innerHTML='<span class="lh">Waiting for scan…</span>';
+  tlist.innerHTML='<div class="empty"><div class="ei">🗂</div><div class="et">Click <strong style="color:var(--acc)">Scan</strong> to start</div></div>';
+  flist.innerHTML='<div class="empty" style="padding:28px 16px"><div class="ei" style="font-size:22px">👆</div><div class="et" style="font-size:10px">Click a table to preview</div></div>';
+  dh.style.display='none';
+  resetStats();
+  prog.style.width='0%';
+  tCount.textContent='';
+  setPill('p-idle','Idle');
+  btnRun.disabled=btnReset.disabled=btnLog.disabled=true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function ts(){ return new Date().toTimeString().slice(0,8); }
+function setPill(cls,txt){ pill.className=`pill ${cls}`; pill.textContent=txt; }
+function resetStats(){ sTables.textContent=sFiles.textContent=sRenames.textContent=sUnmapped.textContent='0'; }
+</script>
+</body>
+</html>
