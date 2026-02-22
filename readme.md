@@ -17,6 +17,9 @@ It supports **two directions**:
 | **Batocera → VPinFE** | Table root → `medias/` subfolder | Files are reverse-renamed to VPinFE conventions and moved into `medias/` (created if missing) |
 
 ---
+<br>
+## Screenshots
+<img src="https://raw.githubusercontent.com/MajorFrenchy/VPX-Media-Organizer/main/screenshots/vpx-merging.jpg" width="50%">
 
 ## File Mapping
 
