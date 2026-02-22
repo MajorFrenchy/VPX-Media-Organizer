@@ -19,7 +19,7 @@ It supports **two directions**:
 ---
 <br>
 ## Screenshots
-<img src="https://raw.githubusercontent.com/MajorFrenchy/VPX-Media-Organizer/main/screenshots/vpx-merging.jpg" width="50%">
+<img src="https://raw.githubusercontent.com/MajorFrenchy/VPX-Media-Organizer/main/screenshots/vpx-merging.jpg" width="85%">
 
 ## File Mapping
 
